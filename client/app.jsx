@@ -50,8 +50,8 @@ function App() {
     const abortCtrl = new AbortController();
     // set default base url
     axios.defaults.baseURL = config.isDev
-      ? 'https://discord-file-uploader.onrender.com/api'
-      : 'https://discord-file-uploader.onrender.com/api';
+      ? 'https://kotha-app.onrender.com/api'
+      : 'https://kotha-app.onrender.com/api';
       // ? 'http://localhost:8080/api'
       // : 'http://localhost:8080/api';
     handleGetMaster(abortCtrl.signal);
