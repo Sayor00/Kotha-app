@@ -1,0 +1,13 @@
+{
+  "appId": "com.kotha.app",
+  "appName": "Kotha App",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "Browser": {
+      "packageName": "@capacitor/browser"
+    }
+  }
+}
