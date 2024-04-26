@@ -25,7 +25,7 @@ function LinkPreview({ url }) {
       // Check if the response contains a video URL and if it is a Twitch URL with parent parameter
       if (
         response.data?.video &&
-        response.data.video.includes('player.twitch.tv') &&
+        response.data.video.includes('twitch.tv') &&
         response.data.video.includes('parent=')
       ) {
         // Extract the current domain from the URL
