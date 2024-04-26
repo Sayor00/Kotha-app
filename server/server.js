@@ -38,7 +38,7 @@ db();
 app.use('/api', routes);
 
 if (!config.isDev) {
-  app.use(express.static('../client/public'));
+  app.use(express.static('client/public'));
   const client = path.join(__dirname, '..', 'client', 'public', 'index.html');
 
   app.get('*', (req, res) => res.sendFile(client));
