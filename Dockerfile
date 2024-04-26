@@ -5,7 +5,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /usr/src/app
 
-COPY server/ ./server/
+RUN cd server
 COPY package*.json ./
 
 RUN npm ci
