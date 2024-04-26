@@ -9,6 +9,7 @@ module.exports = {
       "capacitor://localhost",
       "ionic://localhost",
       "https://kotha-jet.vercel.app",
+      "https://kotha-app.vercel.app",
       // Add more origins if needed
     ],
     credentials: true,

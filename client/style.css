@@ -35,10 +35,9 @@ a {
   color: #bae6fd;
 }
 
-linka {
-  text-decoration: underline;
+.link-a {
   color: #0c4a6e;
 }
-.dark linka {
+.dark .link-a {
   color: #bae6fd;
 }

@@ -50,10 +50,8 @@ function App() {
     const abortCtrl = new AbortController();
     // set default base url
     axios.defaults.baseURL = config.isDev
-      ? 'https://kotha-app.onrender.com/api'
-      : 'https://kotha-app.onrender.com/api';
-      // ? 'http://localhost:8080/api'
-      // : 'http://localhost:8080/api';
+    ? 'http://localhost:8080/api'
+    : 'https://kotha-app.onrender.com/api';
     handleGetMaster(abortCtrl.signal);
 
     socket.on('user/inactivate', () => {

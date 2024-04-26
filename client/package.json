@@ -43,6 +43,7 @@
     "@capacitor/ios": "^5.7.0",
     "@reduxjs/toolkit": "^1.8.6",
     "axios": "^1.1.3",
+    "dotenv": "^16.4.5",
     "emoji-picker-react": "^4.9.2",
     "framer-motion": "^11.1.5",
     "linkify-react": "^4.1.3",

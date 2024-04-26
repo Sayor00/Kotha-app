@@ -16,10 +16,29 @@ function LinkPreview({ url }) {
       console.log('Fetching link preview for URL:', url); // Add console log here
       const source = axios.CancelToken.source();
       cancelToken.current = source;
+
       const response = await axios.get(
         `/url-preview?url=${encodeURIComponent(url)}`,
         { cancelToken: source.token }
       );
+
+      // Check if the response contains a video URL and if it is a Twitch URL with parent parameter
+      if (
+        response.data?.video &&
+        response.data.video.includes('player.twitch.tv') &&
+        response.data.video.includes('parent=')
+      ) {
+        // Extract the current domain from the URL
+        const currentDomain = window.location.hostname;
+        // Replace the parent parameter with the current domain
+        const modifiedUrl = response.data.video.replace(
+          /(parent=)[^\&]+/,
+          `$1${currentDomain}`
+        );
+        console.log('Modified URL:', modifiedUrl);
+        response.data.video = modifiedUrl;
+      }
+
       console.log('Received data from backend:', response.data);
       setLinkPreview(response.data);
       setShowPreview(true);
@@ -137,7 +156,12 @@ function LinkPreview({ url }) {
               <BiLoaderAlt size={18} />
             </i>
             <p>Loading</p>
-            <button onClick={cancelRequest} className='text-red-600 dark:text-red-500'>Cancel</button>
+            <button
+              onClick={cancelRequest}
+              className="text-red-600 dark:text-red-500"
+            >
+              Cancel
+            </button>
           </span>
         </div>
       ) : error ? (
@@ -173,9 +197,7 @@ function LinkPreview({ url }) {
         >
           <p>
             Show Preview for{' '}
-            <linka className="font-bold no-underline">
-              {extractDomainName(url)}
-            </linka>
+            <span className="link-a font-bold">{extractDomainName(url)}</span>
           </p>
         </div>
       )}

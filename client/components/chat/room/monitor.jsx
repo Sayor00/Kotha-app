@@ -27,13 +27,12 @@ function Monitor({
   loaded,
 }) {
   function extractLinks(text) {
-    const linkRegex = /(?:https?:\/\/)?(?:www\.)?[\w\.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi;
+    const linkRegex =
+      /(?:https?:\/\/)?(?:www\.)?[\w\.-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi;
     const matches = text.matchAll(linkRegex);
     const links = Array.from(matches, (match) => match[0]);
     return links;
   }
-  
-  
 
   const dispatch = useDispatch();
   const [openEmojiPickerForChat, setOpenEmojiPickerForChat] = useState(null);
@@ -475,26 +474,61 @@ function Monitor({
 
             if (reply.text) {
               replyContent = (
-                <span>
-                  {reply.userId === master._id ? (
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Replying to yourself:
-                    </span>
-                  ) : (
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Replying to {reply.profile?.fullname}:
-                    </span>
-                  )}
-                  <br />
-                  <p
-      className={`${
-        extractLinks(reply.text) ? 'break-all' : 'break-words'
-      } text-justify`}
-      aria-hidden
-    >
-      {reply.text}
-    </p>
-                </span>
+                <>
+                  <div>
+                    {reply.userId === master._id ? (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Replying to yourself:
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Replying to {reply.profile?.fullname}:
+                      </span>
+                    )}
+                    <br />
+                  </div>
+                  <div>
+                    <p
+                      className="text-justify"
+                      style={{
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                      aria-hidden
+                      onClick={(e) => {
+                        if (e.ctrlKey) e.preventDefault();
+                      }}
+                    >
+                      {extractLinks(reply.text).length > 0 ? (
+                        extractLinks(reply.text).map((link, index) => (
+                          <span key={index}>
+                            <span className="break-words">
+                              {index === 0
+                                ? reply.text.split(link)[0]
+                                : reply.text
+                                    .split(
+                                      extractLinks(reply.text)[index - 1]
+                                    )[1]
+                                    .split(link)[0]}
+                            </span>
+                            <span className="break-all">
+                              <span className="link-a">{link}</span>
+                            </span>
+                            {index === extractLinks(reply.text).length - 1 && (
+                              <span className="break-words">
+                                {reply.text.split(link)[1]}
+                              </span>
+                            )}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="select-none">
+                          <span>{reply.text}</span>
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </>
               );
             } else if (reply.file) {
               replyContent = (
@@ -616,15 +650,16 @@ function Monitor({
                 }
                 <div
                   className={`
-                    ${elem.userId !== arr[i + 1]?.userId && 'mb-2'}
-                    ${selectedChats ? 'cursor-pointer' : ''}
-                    ${
-                      selectedChats &&
-                      selectedChats.includes(elem._id) &&
-                      'bg-spill-200 dark:bg-black/20'
-                    }
-                    w-full py-0.5 px-4 flex gap-4 justify-center items-center
-                  `}
+    ${elem.userId !== arr[i + 1]?.userId && 'mb-2'}
+    ${selectedChats ? 'cursor-pointer' : ''}
+    ${
+      selectedChats &&
+      selectedChats.includes(elem._id) &&
+      'bg-spill-200 dark:bg-black/20'
+    }
+    w-full py-0.5 px-4 gap-4 justify-center items-center
+    relative
+  `}
                   aria-hidden
                   onClick={() => {
                     if (selectedChats) {
@@ -638,7 +673,7 @@ function Monitor({
                         selectedChats.includes(elem._id)
                           ? 'bg-sky-400 dark:bg-sky-600'
                           : 'transparent'
-                      } w-6 h-6 flex flex-none justify-center items-center rounded-full border-2 border-solid border-spill-900/60 dark:border-spill-100/60`}
+                      } w-6 h-6 flex flex-none justify-center items-center rounded-full border-2 border-solid border-spill-900/60 dark:border-spill-100/60 absolute top-1/2 left-2 transform -translate-y-1/2`}
                     >
                       {selectedChats.includes(elem._id) && (
                         <bi.BiCheck size={18} />
@@ -646,11 +681,20 @@ function Monitor({
                     </span>
                   )}
                   <div
-                    className={`${
-                      elem.userId === master._id && 'justify-end'
-                    } w-[560px] flex`}
+                    className={`
+                      ${
+                        elem.userId === master._id
+                          ? 'justify-end' // For right-aligned content (far right)
+                          : 'justify-start' // For left-aligned content (far left)
+                      }
+                      flex
+                      ${
+                        selectedChats && 'pl-2'
+                      } // Adjust left padding for all chats when select circle is visible
+                    `}
                   >
-                    {elem.userId === master._id ? (
+                    {elem.userId === master._id && (
+                      // start of I want this to be at far right
                       <div>
                         <div className="flex items-center">
                           <div className="flex">
@@ -689,7 +733,7 @@ function Monitor({
                                   prevState === elem._id ? null : elem._id
                                 );
                               }}
-                              className="reaction-button ml-8 p-2 rounded-full bg-spill-200 hover:bg-spill-400 dark:bg-spill-800 dark:hover:bg-spill-600"
+                              className="reaction-button ml-0 md:ml-8 p-2 rounded-full bg-spill-200 hover:bg-spill-400 dark:bg-spill-800 dark:hover:bg-spill-600"
                             >
                               {openEmojiPickerForChat === elem._id ? (
                                 <i>
@@ -714,6 +758,7 @@ function Monitor({
                             ml-2 
                             rounded-l-xl 
                             bg-sky-200 dark:bg-sky-600/40
+                            max-w-[65vw] md:max-w-[30vw] lg:max-w-[450px]
                             ${
                               elem.userId === arr[i - 1]?.userId &&
                               moment(elem.createdAt).date() ===
@@ -822,7 +867,7 @@ function Monitor({
                             <div
                               id={`content-${elem._id}`}
                               className={`${
-                                elem.userId === master._id && 'px-1'
+                                elem.userId === master._id
                               }`}
                             >
                               {/* Content of the chat */}
@@ -841,7 +886,7 @@ function Monitor({
                                   </div>
                                 )}
                                 <p
-                                  className={`text-justify`}
+                                  className="text-justify break-words px-1"
                                   aria-hidden
                                   onClick={(e) => {
                                     if (e.ctrlKey) e.preventDefault();
@@ -914,7 +959,7 @@ function Monitor({
                           </div>
                         </div>
                         {renderReactions(elem._id) && (
-                          <div className="left-24 -mt-2 z-10 relative max-w-fit">
+                          <div className="left-16 md:left-24 -mt-2 z-10 relative max-w-fit">
                             <button
                               onClick={() => setShowReactionsForChat(elem._id)}
                               type="button"
@@ -944,8 +989,10 @@ function Monitor({
                             />
                           )}
                       </div>
-                    ) : (
-                      <div>
+                      // end of I want rhis to be at far right
+                    )}
+                    {elem.userId !== master._id && (
+                      <div className={`${selectedChats && 'pl-6'} `}>
                         <div className="flex items-center">
                           {/* chat card */}
                           <div
@@ -953,6 +1000,7 @@ function Monitor({
                             mr-2 
                             rounded-r-xl 
                             bg-white dark:bg-spill-700
+                            max-w-[65vw] md:max-w-[30vw] lg:max-w-[450px]
                             ${
                               elem.userId === arr[i - 1]?.userId &&
                               moment(elem.createdAt).date() ===
@@ -1061,7 +1109,7 @@ function Monitor({
                             <div
                               id={`content-${elem._id}`}
                               className={`${
-                                elem.userId === master._id && 'px-1'
+                                elem.userId === master._id
                               }`}
                             >
                               {/* Content of the chat */}
@@ -1080,7 +1128,7 @@ function Monitor({
                                   </div>
                                 )}
                                 <p
-                                  className={`text-justify px-1`}
+                                  className="text-justify break-words px-1"
                                   aria-hidden
                                   onClick={(e) => {
                                     if (e.ctrlKey) e.preventDefault();
@@ -1187,7 +1235,7 @@ function Monitor({
                                   prevState === elem._id ? null : elem._id
                                 );
                               }}
-                              className="reaction-button mr-8 p-2 rounded-full bg-spill-200 hover:bg-spill-400 dark:bg-spill-800 dark:hover:bg-spill-600"
+                              className="reaction-button mr-0 md:mr-8 p-2 rounded-full bg-spill-200 hover:bg-spill-400 dark:bg-spill-800 dark:hover:bg-spill-600"
                             >
                               {openEmojiPickerForChat === elem._id ? (
                                 <i>
@@ -1237,6 +1285,7 @@ function Monitor({
                             />
                           )}
                       </div>
+                      // end of I want this to be at far left
                     )}
                   </div>
                 </div>
