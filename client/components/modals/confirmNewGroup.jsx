@@ -100,7 +100,7 @@ function ConfirmNewGroup() {
           )}
         </div>
         {modal.newGroup && (
-          <form method="post" className="mt-4 grid" onSubmit={handleSubmit}>
+          <form method="post" className="mt-4 grid" onSubmit={handleSubmit} autocomplete="off">
             <span className="grid gap-2">
               {[
                 {
@@ -133,6 +133,7 @@ function ConfirmNewGroup() {
                     maxLength={elem.maxLength}
                     required={elem.required}
                     placeholder={elem.placeholder}
+                    autocomplete="off"
                     value={form[elem.target]}
                     className={`${
                       form[elem.target].length > 0

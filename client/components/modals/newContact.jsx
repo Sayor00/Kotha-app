@@ -101,7 +101,7 @@ function NewContact() {
         </div>
         {/* content */}
         <div>
-          <form method="post" onSubmit={handleSubmit} className="grid">
+        <form method="post" onSubmit={handleSubmit} className="grid" autocomplete="off">
             <span className="grid gap-2">
               {[
                 {
@@ -134,6 +134,7 @@ function NewContact() {
                     maxLength={elem.maxLength}
                     required={elem.required}
                     placeholder={elem.placeholder}
+                    autocomplete="off"
                     value={form[elem.target]}
                     className={`${
                       form[elem.target].length > 0

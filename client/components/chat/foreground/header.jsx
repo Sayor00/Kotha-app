@@ -63,6 +63,7 @@ function Header({ setSearch }) {
             id="search"
             className="w-full placeholder:opacity-80"
             placeholder="Search chats..."
+            autocomplete="off"
             onChange={(e) => {
               clearTimeout(inputTimeout.current);
 

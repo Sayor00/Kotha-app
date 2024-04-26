@@ -177,6 +177,7 @@ function Send({ setChats, setNewMessage, control }) {
           name="text"
           id="new-message"
           placeholder="Type a message"
+          autocomplete="off"
           className="py-4 w-full h-full placeholder:opacity-60"
           onChange={handleChange}
           value={form.text}
