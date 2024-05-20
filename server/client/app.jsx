@@ -11,6 +11,7 @@ import socket from './helpers/socket';
 import config from './config';
 import { getSetting } from './api/services/setting.api';
 import Call from './components/call/call';
+import { isMobile } from 'react-device-detect';
 
 function App() {
   const dispatch = useDispatch();
@@ -20,7 +21,6 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [incomingCallDetails, setIncomingCallDetails] = useState(null);
   const [outgoingCallDetails, setOutgoingCallDetails] = useState(null);
-
 
   // get access token from localStorage
   const token = localStorage.getItem('token');
@@ -74,7 +74,7 @@ function App() {
       console.log('Call Type:', callType);
       setIncomingCallDetails({ callId, roomId, callerId, callType, roomType }); // Store incoming call details in state
     });
-    
+
     socket.on('call/outgoing', ({ callId, roomId, callerId, receivers, callType, roomType }) => {
       console.log('Outgoing call initiated:');
       console.log('Call ID:', callId);
@@ -84,7 +84,7 @@ function App() {
       console.log('Room Type:', roomType);
       console.log('Call Type:', callType);
       setOutgoingCallDetails({ callId, roomId, callerId, receivers, callType, roomType }); // Store outgoing call details in state
-    });    
+    });
 
     return () => {
       abortCtrl.abort();
@@ -104,29 +104,29 @@ function App() {
   }, [!!master]);
 
   useEffect(() => {
-    if (incomingCallDetails) {
+    if (incomingCallDetails && !isMobile) {
       const callWindow = window.open(
         '',
         'IncomingCall',
         'width=600,height=400'
       );
-  
+
       if (callWindow) {
         callWindow.document.write('<div id="call-root"></div>');
         callWindow.document.close();
-  
+
         // Render Call component in the new window
         ReactDOM.render(
-          <Call 
-            callId={incomingCallDetails.callId} 
-            caller={incomingCallDetails.callerId} 
-            receiver={master._id} 
-            callType={incomingCallDetails.callType} 
-            isCaller={false} 
+          <Call
+            callId={incomingCallDetails.callId}
+            caller={incomingCallDetails.callerId}
+            receiver={master._id}
+            callType={incomingCallDetails.callType}
+            isCaller={false}
           />,
           callWindow.document.getElementById('call-root')
         );
-  
+
         callWindow.onbeforeunload = () => {
           setIncomingCallDetails(null);
         };
@@ -134,32 +134,32 @@ function App() {
         console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
       }
     }
-  }, [incomingCallDetails]);
+  }, [incomingCallDetails, master]);
 
   useEffect(() => {
-    if (outgoingCallDetails) {
+    if (outgoingCallDetails && !isMobile) {
       const callWindow = window.open(
         '',
         'OutgoingCall',
         'width=600,height=400'
       );
-  
+
       if (callWindow) {
         callWindow.document.write('<div id="call-root"></div>');
         callWindow.document.close();
-    
+
         // Render Call component in the new window
         ReactDOM.render(
-          <Call 
-            callId={outgoingCallDetails.callId} 
-            caller={master._id} 
-            receiver={outgoingCallDetails.receivers} 
-            callType={outgoingCallDetails.callType} 
-            isCaller={true} 
+          <Call
+            callId={outgoingCallDetails.callId}
+            caller={master._id}
+            receiver={outgoingCallDetails.receivers}
+            callType={outgoingCallDetails.callType}
+            isCaller={true}
           />,
           callWindow.document.getElementById('call-root')
         );
-  
+
         callWindow.onbeforeunload = () => {
           setOutgoingCallDetails(null);
         };
@@ -167,8 +167,7 @@ function App() {
         console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
       }
     }
-  }, [outgoingCallDetails]);  
-  
+  }, [outgoingCallDetails, master]);
 
   return (
     <BrowserRouter>
@@ -182,6 +181,38 @@ function App() {
                 path="*"
                 element={master.verified ? <route.chat /> : <route.verify />}
               />
+              {isMobile && (
+                <>
+                  {incomingCallDetails && (
+                    <Route
+                      path="/call"
+                      element={
+                        <Call
+                          callId={incomingCallDetails.callId}
+                          caller={incomingCallDetails.callerId}
+                          receiver={master._id}
+                          callType={incomingCallDetails.callType}
+                          isCaller={false}
+                        />
+                      }
+                    />
+                  )}
+                  {outgoingCallDetails && (
+                    <Route
+                      path="/call"
+                      element={
+                        <Call
+                          callId={outgoingCallDetails.callId}
+                          caller={master._id}
+                          receiver={outgoingCallDetails.receivers}
+                          callType={outgoingCallDetails.callType}
+                          isCaller={true}
+                        />
+                      }
+                    />
+                  )}
+                </>
+              )}
             </>
           ) : (
             <Route exact path="*" element={<route.auth />} />
