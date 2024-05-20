@@ -21,6 +21,7 @@ function App() {
   const [incomingCallDetails, setIncomingCallDetails] = useState(null);
   const [outgoingCallDetails, setOutgoingCallDetails] = useState(null);
 
+
   // get access token from localStorage
   const token = localStorage.getItem('token');
 
@@ -64,45 +65,26 @@ function App() {
     });
 
     // Add event listener to handle incoming call event
-    socket.on(
-      'call/incoming',
-      ({ callId, roomId, callerId, callType, roomType }) => {
-        console.log('Incoming call received:');
-        console.log('Call ID:', callId);
-        console.log('Room ID:', roomId);
-        console.log('Caller ID:', callerId);
-        console.log('Room Type:', roomType);
-        console.log('Call Type:', callType);
-        setIncomingCallDetails({
-          callId,
-          roomId,
-          callerId,
-          callType,
-          roomType,
-        }); // Store incoming call details in state
-      }
-    );
-
-    socket.on(
-      'call/outgoing',
-      ({ callId, roomId, callerId, receivers, callType, roomType }) => {
-        console.log('Outgoing call initiated:');
-        console.log('Call ID:', callId);
-        console.log('Room ID:', roomId);
-        console.log('Caller ID:', callerId);
-        console.log('Receivers:', receivers);
-        console.log('Room Type:', roomType);
-        console.log('Call Type:', callType);
-        setOutgoingCallDetails({
-          callId,
-          roomId,
-          callerId,
-          receivers,
-          callType,
-          roomType,
-        }); // Store outgoing call details in state
-      }
-    );
+    socket.on('call/incoming', ({ callId, roomId, callerId, callType, roomType }) => {
+      console.log('Incoming call received:');
+      console.log('Call ID:', callId);
+      console.log('Room ID:', roomId);
+      console.log('Caller ID:', callerId);
+      console.log('Room Type:', roomType);
+      console.log('Call Type:', callType);
+      setIncomingCallDetails({ callId, roomId, callerId, callType, roomType }); // Store incoming call details in state
+    });
+    
+    socket.on('call/outgoing', ({ callId, roomId, callerId, receivers, callType, roomType }) => {
+      console.log('Outgoing call initiated:');
+      console.log('Call ID:', callId);
+      console.log('Room ID:', roomId);
+      console.log('Caller ID:', callerId);
+      console.log('Receivers:', receivers);
+      console.log('Room Type:', roomType);
+      console.log('Call Type:', callType);
+      setOutgoingCallDetails({ callId, roomId, callerId, receivers, callType, roomType }); // Store outgoing call details in state
+    });    
 
     return () => {
       abortCtrl.abort();
@@ -121,91 +103,72 @@ function App() {
     };
   }, [!!master]);
 
-  const requestPermissions = async (callType) => {
-    try {
-      if (callType === 'video') {
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      } else if (callType === 'audio') {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      }
-    } catch (error) {
-      console.error('Error requesting media permissions:', error);
-    }
-  };
-
   useEffect(() => {
     if (incomingCallDetails) {
-      requestPermissions(incomingCallDetails.callType).then(() => {
-        const callWindow = window.open(
-          '',
-          'IncomingCall',
-          'width=600,height=400'
+      const callWindow = window.open(
+        '',
+        'IncomingCall',
+        'width=600,height=400'
+      );
+  
+      if (callWindow) {
+        callWindow.document.write('<div id="call-root"></div>');
+        callWindow.document.close();
+  
+        // Render Call component in the new window
+        ReactDOM.render(
+          <Call 
+            callId={incomingCallDetails.callId} 
+            caller={incomingCallDetails.callerId} 
+            receiver={master._id} 
+            callType={incomingCallDetails.callType} 
+            isCaller={false} 
+          />,
+          callWindow.document.getElementById('call-root')
         );
-
-        if (callWindow) {
-          callWindow.document.write('<div id="call-root"></div>');
-          callWindow.document.close();
-
-          // Render Call component in the new window
-          ReactDOM.render(
-            <Call
-              callId={incomingCallDetails.callId}
-              caller={incomingCallDetails.callerId}
-              receiver={master._id}
-              callType={incomingCallDetails.callType}
-              isCaller={false}
-            />,
-            callWindow.document.getElementById('call-root')
-          );
-
-          callWindow.onbeforeunload = () => {
-            setIncomingCallDetails(null);
-          };
-        } else {
-          console.error(
-            'Failed to open the call window. It may have been blocked by a popup blocker.'
-          );
-        }
-      });
+  
+        callWindow.onbeforeunload = () => {
+          setIncomingCallDetails(null);
+        };
+      } else {
+        console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
+      }
     }
   }, [incomingCallDetails]);
 
   useEffect(() => {
     if (outgoingCallDetails) {
-      requestPermissions(outgoingCallDetails.callType).then(() => {
-        const callWindow = window.open(
-          '',
-          'OutgoingCall',
-          'width=600,height=400'
+      const callWindow = window.open(
+        '',
+        'OutgoingCall',
+        'width=600,height=400'
+      );
+  
+      if (callWindow) {
+        callWindow.document.write('<div id="call-root"></div>');
+        callWindow.document.close();
+    
+        // Render Call component in the new window
+        ReactDOM.render(
+          <Call 
+            callId={outgoingCallDetails.callId} 
+            caller={master._id} 
+            receiver={outgoingCallDetails.receivers} 
+            callType={outgoingCallDetails.callType} 
+            isCaller={true} 
+          />,
+          callWindow.document.getElementById('call-root')
         );
-
-        if (callWindow) {
-          callWindow.document.write('<div id="call-root"></div>');
-          callWindow.document.close();
-
-          // Render Call component in the new window
-          ReactDOM.render(
-            <Call
-              callId={outgoingCallDetails.callId}
-              caller={master._id}
-              receiver={outgoingCallDetails.receivers}
-              callType={outgoingCallDetails.callType}
-              isCaller={true}
-            />,
-            callWindow.document.getElementById('call-root')
-          );
-
-          callWindow.onbeforeunload = () => {
-            setOutgoingCallDetails(null);
-          };
-        } else {
-          console.error(
-            'Failed to open the call window. It may have been blocked by a popup blocker.'
-          );
-        }
-      });
+  
+        callWindow.onbeforeunload = () => {
+          setOutgoingCallDetails(null);
+        };
+      } else {
+        console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
+      }
     }
-  }, [outgoingCallDetails]);
+  }, [outgoingCallDetails]);  
+  
 
   return (
     <BrowserRouter>
