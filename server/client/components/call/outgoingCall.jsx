@@ -2,23 +2,21 @@ import React, { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import socket from '../../helpers/socket';
 
-const Call = ({ callId, caller, receiver, callType, isCaller }) => {
-  const [callStatus, setCallStatus] = useState(isCaller ? 'calling' : 'ringing');
+const OutgoingCall = ({ callId, caller, receiver, callType, isCaller }) => {
+  const [callStatus, setCallStatus] = useState('calling');
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const iceCandidatesRef = useRef([]); // Queue to store ICE candidates
 
   useEffect(() => {
-    if (isCaller) {
-      const timeoutId = setTimeout(() => {
-        setCallStatus('noAnswer');
-        socket.emit('call/end', { callId });
-      }, 60000); // 1 minute timeout for unanswered calls
+    const timeoutId = setTimeout(() => {
+      setCallStatus('noAnswer');
+      socket.emit('call/end', { callId });
+    }, 60000); // 1 minute timeout for unanswered calls
 
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isCaller, callId]);
+    return () => clearTimeout(timeoutId);
+  }, [callId]);
 
   useEffect(() => {
     const handleCallAnswer = ({ answer }) => {
@@ -40,15 +38,6 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
     const handleConnectionLost = () => {
       setCallStatus('connectionLost');
       endCall();
-    };
-
-    const handleOffer = async ({ callId: offerCallId, offer }) => {
-      if (callId === offerCallId) {
-        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
-        const answer = await peerConnectionRef.current.createAnswer();
-        await peerConnectionRef.current.setLocalDescription(answer);
-        socket.emit('webrtc/answer', { callId, answer });
-      }
     };
 
     const handleAnswer = async ({ callId: answerCallId, answer }) => {
@@ -76,7 +65,6 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
     socket.on('call/answer', handleCallAnswer);
     socket.on('call/end', handleCallEnd);
     socket.on('disconnect', handleConnectionLost);
-    socket.on('webrtc/offer', handleOffer);
     socket.on('webrtc/answer', handleAnswer);
     socket.on('webrtc/ice-candidate', handleICECandidate);
 
@@ -84,7 +72,6 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
       socket.off('call/answer', handleCallAnswer);
       socket.off('call/end', handleCallEnd);
       socket.off('disconnect', handleConnectionLost);
-      socket.off('webrtc/offer', handleOffer);
       socket.off('webrtc/answer', handleAnswer);
       socket.off('webrtc/ice-candidate', handleICECandidate);
     };
@@ -153,13 +140,6 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
 
   return (
     <div>
-      {callStatus === 'ringing' && (
-        <div>
-          <p>Incoming call from {caller}</p>
-          <button onClick={() => { setCallStatus('connected'); startWebRTC(false); socket.emit('call/answer', { callId, answer: true }); }}>Answer</button>
-          <button onClick={() => socket.emit('call/answer', { callId, answer: false })}>Reject</button>
-        </div>
-      )}
       {callStatus === 'calling' && (
         <div>
           <p>Calling: {receiver}</p>
@@ -168,7 +148,7 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
       )}
       {callStatus === 'connected' && (
         <div>
-          <p>Call connected with {isCaller ? receiver : caller}</p>
+          <p>Call connected with {receiver}</p>
           <video ref={localStreamRef} autoPlay muted />
           <video ref={remoteStreamRef} autoPlay />
           <button onClick={handleEndCall}>End Call</button>
@@ -182,7 +162,7 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
   );
 };
 
-Call.propTypes = {
+OutgoingCall.propTypes = {
   callId: PropTypes.string.isRequired,
   caller: PropTypes.string.isRequired,
   receiver: PropTypes.string.isRequired,
@@ -190,4 +170,4 @@ Call.propTypes = {
   isCaller: PropTypes.bool.isRequired,
 };
 
-export default Call;
+export default OutgoingCall;

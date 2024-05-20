@@ -10,7 +10,8 @@ import { setMaster, setSetting } from './redux/features/user';
 import socket from './helpers/socket';
 import config from './config';
 import { getSetting } from './api/services/setting.api';
-import Call from './components/call/call';
+import OutgoingCall from './components/call/outgoingCall';
+import IncomingCall from './components/call/incomingCall';
 
 function App() {
   const dispatch = useDispatch();
@@ -117,7 +118,7 @@ function App() {
   
         // Render Call component in the new window
         ReactDOM.render(
-          <Call 
+          <IncomingCall 
             callId={incomingCallDetails.callId} 
             caller={incomingCallDetails.callerId} 
             receiver={master._id} 
@@ -150,7 +151,7 @@ function App() {
     
         // Render Call component in the new window
         ReactDOM.render(
-          <Call 
+          <OutgoingCall 
             callId={outgoingCallDetails.callId} 
             caller={master._id} 
             receiver={outgoingCallDetails.receivers} 
