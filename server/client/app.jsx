@@ -185,7 +185,8 @@ function App() {
                 <>
                   {incomingCallDetails && (
                     <Route
-                      path="/call"
+                    exact
+                      path="*"
                       element={
                         <Call
                           callId={incomingCallDetails.callId}
@@ -199,7 +200,8 @@ function App() {
                   )}
                   {outgoingCallDetails && (
                     <Route
-                      path="/call"
+                    exact
+                      path="*"
                       element={
                         <Call
                           callId={outgoingCallDetails.callId}
