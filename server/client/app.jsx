@@ -11,7 +11,6 @@ import socket from './helpers/socket';
 import config from './config';
 import { getSetting } from './api/services/setting.api';
 import Call from './components/call/call';
-import { isMobile } from 'react-device-detect';
 
 function App() {
   const dispatch = useDispatch();
@@ -122,121 +121,105 @@ function App() {
     };
   }, [!!master]);
 
-  useEffect(() => {
-    if (incomingCallDetails && !isMobile) {
-      const callWindow = window.open(
-        '',
-        'IncomingCall',
-        'width=600,height=400'
-      );
-
-      if (callWindow) {
-        callWindow.document.write('<div id="call-root"></div>');
-        callWindow.document.close();
-
-        // Render Call component in the new window
-        ReactDOM.render(
-          <Call
-            callId={incomingCallDetails.callId}
-            caller={incomingCallDetails.callerId}
-            receiver={master._id}
-            callType={incomingCallDetails.callType}
-            isCaller={false}
-          />,
-          callWindow.document.getElementById('call-root')
-        );
-
-        callWindow.onbeforeunload = () => {
-          setIncomingCallDetails(null);
-        };
-      } else {
-        console.error(
-          'Failed to open the call window. It may have been blocked by a popup blocker.'
-        );
+  const requestPermissions = async (callType) => {
+    try {
+      if (callType === 'video') {
+        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } else if (callType === 'audio') {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
       }
+    } catch (error) {
+      console.error('Error requesting media permissions:', error);
     }
-  }, [incomingCallDetails, master]);
+  };
 
   useEffect(() => {
-    if (outgoingCallDetails && !isMobile) {
-      const callWindow = window.open(
-        '',
-        'OutgoingCall',
-        'width=600,height=400'
-      );
-
-      if (callWindow) {
-        callWindow.document.write('<div id="call-root"></div>');
-        callWindow.document.close();
-
-        // Render Call component in the new window
-        ReactDOM.render(
-          <Call
-            callId={outgoingCallDetails.callId}
-            caller={master._id}
-            receiver={outgoingCallDetails.receivers}
-            callType={outgoingCallDetails.callType}
-            isCaller={true}
-          />,
-          callWindow.document.getElementById('call-root')
+    if (incomingCallDetails) {
+      requestPermissions(incomingCallDetails.callType).then(() => {
+        const callWindow = window.open(
+          '',
+          'IncomingCall',
+          'width=600,height=400'
         );
 
-        callWindow.onbeforeunload = () => {
-          setOutgoingCallDetails(null);
-        };
-      } else {
-        console.error(
-          'Failed to open the call window. It may have been blocked by a popup blocker.'
-        );
-      }
+        if (callWindow) {
+          callWindow.document.write('<div id="call-root"></div>');
+          callWindow.document.close();
+
+          // Render Call component in the new window
+          ReactDOM.render(
+            <Call
+              callId={incomingCallDetails.callId}
+              caller={incomingCallDetails.callerId}
+              receiver={master._id}
+              callType={incomingCallDetails.callType}
+              isCaller={false}
+            />,
+            callWindow.document.getElementById('call-root')
+          );
+
+          callWindow.onbeforeunload = () => {
+            setIncomingCallDetails(null);
+          };
+        } else {
+          console.error(
+            'Failed to open the call window. It may have been blocked by a popup blocker.'
+          );
+        }
+      });
     }
-  }, [outgoingCallDetails, master]);
+  }, [incomingCallDetails]);
+
+  useEffect(() => {
+    if (outgoingCallDetails) {
+      requestPermissions(outgoingCallDetails.callType).then(() => {
+        const callWindow = window.open(
+          '',
+          'OutgoingCall',
+          'width=600,height=400'
+        );
+
+        if (callWindow) {
+          callWindow.document.write('<div id="call-root"></div>');
+          callWindow.document.close();
+
+          // Render Call component in the new window
+          ReactDOM.render(
+            <Call
+              callId={outgoingCallDetails.callId}
+              caller={master._id}
+              receiver={outgoingCallDetails.receivers}
+              callType={outgoingCallDetails.callType}
+              isCaller={true}
+            />,
+            callWindow.document.getElementById('call-root')
+          );
+
+          callWindow.onbeforeunload = () => {
+            setOutgoingCallDetails(null);
+          };
+        } else {
+          console.error(
+            'Failed to open the call window. It may have been blocked by a popup blocker.'
+          );
+        }
+      });
+    }
+  }, [outgoingCallDetails]);
 
   return (
     <BrowserRouter>
       {loaded ? (
         <Routes>
-          {isMobile && (
-            <>
-              {incomingCallDetails && (
-                <Route
-                  exact
-                  path="*"
-                  element={
-                    <Call
-                      callId={incomingCallDetails.callId}
-                      caller={incomingCallDetails.callerId}
-                      receiver={master._id}
-                      callType={incomingCallDetails.callType}
-                      isCaller={false}
-                    />
-                  }
-                />
-              )}
-              {outgoingCallDetails && (
-                <Route
-                  exact
-                  path="*"
-                  element={
-                    <Call
-                      callId={outgoingCallDetails.callId}
-                      caller={master._id}
-                      receiver={outgoingCallDetails.receivers}
-                      callType={outgoingCallDetails.callType}
-                      isCaller={true}
-                    />
-                  }
-                />
-              )}
-            </>
-          )}
           {inactive && <Route exact path="*" element={<route.inactive />} />}
           {!inactive && master ? (
-            <Route
-              exact
-              path="*"
-              element={master.verified ? <route.chat /> : <route.verify />}
-            />
+            <>
+              <Route
+                exact
+                path="*"
+                element={master.verified ? <route.chat /> : <route.verify />}
+              />
+            </>
           ) : (
             <Route exact path="*" element={<route.auth />} />
           )}
