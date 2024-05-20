@@ -44,6 +44,7 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
 
     const handleOffer = async ({ callId: offerCallId, offer }) => {
       if (callId === offerCallId) {
+        console.log(`Received offer for callId ${callId}:`, offer);
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
         const answer = await peerConnectionRef.current.createAnswer();
         await peerConnectionRef.current.setLocalDescription(answer);
@@ -53,9 +54,10 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
 
     const handleAnswer = async ({ callId: answerCallId, answer }) => {
       if (callId === answerCallId) {
+        console.log(`Received answer for callId ${callId}:`, answer);
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-        // Process any queued ICE candidates
         iceCandidatesRef.current.forEach(candidate => {
+          console.log(`Adding queued ICE candidate for callId ${callId}:`, candidate);
           peerConnectionRef.current.addIceCandidate(candidate);
         });
         iceCandidatesRef.current = [];
@@ -64,11 +66,19 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
 
     const handleICECandidate = ({ callId: candidateCallId, candidate }) => {
       if (callId === candidateCallId && candidate) {
+        const iceCandidate = new RTCIceCandidate(candidate);
+        console.log(`Received ICE candidate for callId ${callId}:`, candidate);
         if (peerConnectionRef.current.remoteDescription) {
-          peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+          peerConnectionRef.current.addIceCandidate(iceCandidate)
+            .then(() => {
+              console.log(`Successfully added ICE candidate for callId ${callId}:`, candidate);
+            })
+            .catch(error => {
+              console.error(`Failed to add ICE candidate for callId ${callId}:`, error);
+            });
         } else {
-          // Queue ICE candidates if the remote description is not yet set
-          iceCandidatesRef.current.push(new RTCIceCandidate(candidate));
+          iceCandidatesRef.current.push(iceCandidate);
+          console.log(`Queued ICE candidate for callId ${callId} as remoteDescription is not set yet:`, candidate);
         }
       }
     };
@@ -96,6 +106,7 @@ const Call = ({ callId, caller, receiver, callType, isCaller }) => {
 
     peerConnectionRef.current.onicecandidate = (event) => {
       if (event.candidate) {
+        console.log(`Sending ICE candidate for callId ${callId}:`, event.candidate);
         socket.emit('webrtc/ice-candidate', { callId, candidate: event.candidate });
       }
     };
