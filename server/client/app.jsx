@@ -65,26 +65,45 @@ function App() {
     });
 
     // Add event listener to handle incoming call event
-    socket.on('call/incoming', ({ callId, roomId, callerId, callType, roomType }) => {
-      console.log('Incoming call received:');
-      console.log('Call ID:', callId);
-      console.log('Room ID:', roomId);
-      console.log('Caller ID:', callerId);
-      console.log('Room Type:', roomType);
-      console.log('Call Type:', callType);
-      setIncomingCallDetails({ callId, roomId, callerId, callType, roomType }); // Store incoming call details in state
-    });
+    socket.on(
+      'call/incoming',
+      ({ callId, roomId, callerId, callType, roomType }) => {
+        console.log('Incoming call received:');
+        console.log('Call ID:', callId);
+        console.log('Room ID:', roomId);
+        console.log('Caller ID:', callerId);
+        console.log('Room Type:', roomType);
+        console.log('Call Type:', callType);
+        setIncomingCallDetails({
+          callId,
+          roomId,
+          callerId,
+          callType,
+          roomType,
+        }); // Store incoming call details in state
+      }
+    );
 
-    socket.on('call/outgoing', ({ callId, roomId, callerId, receivers, callType, roomType }) => {
-      console.log('Outgoing call initiated:');
-      console.log('Call ID:', callId);
-      console.log('Room ID:', roomId);
-      console.log('Caller ID:', callerId);
-      console.log('Receivers:', receivers);
-      console.log('Room Type:', roomType);
-      console.log('Call Type:', callType);
-      setOutgoingCallDetails({ callId, roomId, callerId, receivers, callType, roomType }); // Store outgoing call details in state
-    });
+    socket.on(
+      'call/outgoing',
+      ({ callId, roomId, callerId, receivers, callType, roomType }) => {
+        console.log('Outgoing call initiated:');
+        console.log('Call ID:', callId);
+        console.log('Room ID:', roomId);
+        console.log('Caller ID:', callerId);
+        console.log('Receivers:', receivers);
+        console.log('Room Type:', roomType);
+        console.log('Call Type:', callType);
+        setOutgoingCallDetails({
+          callId,
+          roomId,
+          callerId,
+          receivers,
+          callType,
+          roomType,
+        }); // Store outgoing call details in state
+      }
+    );
 
     return () => {
       abortCtrl.abort();
@@ -131,7 +150,9 @@ function App() {
           setIncomingCallDetails(null);
         };
       } else {
-        console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
+        console.error(
+          'Failed to open the call window. It may have been blocked by a popup blocker.'
+        );
       }
     }
   }, [incomingCallDetails, master]);
@@ -164,7 +185,9 @@ function App() {
           setOutgoingCallDetails(null);
         };
       } else {
-        console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
+        console.error(
+          'Failed to open the call window. It may have been blocked by a popup blocker.'
+        );
       }
     }
   }, [outgoingCallDetails, master]);
@@ -173,49 +196,47 @@ function App() {
     <BrowserRouter>
       {loaded ? (
         <Routes>
-          {inactive && <Route exact path="*" element={<route.inactive />} />}
-          {!inactive && master ? (
+          {isMobile && (
             <>
-              <Route
-                exact
-                path="*"
-                element={master.verified ? <route.chat /> : <route.verify />}
-              />
-              {isMobile && (
-                <>
-                  {incomingCallDetails && (
-                    <Route
-                    exact
-                      path="*"
-                      element={
-                        <Call
-                          callId={incomingCallDetails.callId}
-                          caller={incomingCallDetails.callerId}
-                          receiver={master._id}
-                          callType={incomingCallDetails.callType}
-                          isCaller={false}
-                        />
-                      }
+              {incomingCallDetails && (
+                <Route
+                  exact
+                  path="*"
+                  element={
+                    <Call
+                      callId={incomingCallDetails.callId}
+                      caller={incomingCallDetails.callerId}
+                      receiver={master._id}
+                      callType={incomingCallDetails.callType}
+                      isCaller={false}
                     />
-                  )}
-                  {outgoingCallDetails && (
-                    <Route
-                    exact
-                      path="*"
-                      element={
-                        <Call
-                          callId={outgoingCallDetails.callId}
-                          caller={master._id}
-                          receiver={outgoingCallDetails.receivers}
-                          callType={outgoingCallDetails.callType}
-                          isCaller={true}
-                        />
-                      }
+                  }
+                />
+              )}
+              {outgoingCallDetails && (
+                <Route
+                  exact
+                  path="*"
+                  element={
+                    <Call
+                      callId={outgoingCallDetails.callId}
+                      caller={master._id}
+                      receiver={outgoingCallDetails.receivers}
+                      callType={outgoingCallDetails.callType}
+                      isCaller={true}
                     />
-                  )}
-                </>
+                  }
+                />
               )}
             </>
+          )}
+          {inactive && <Route exact path="*" element={<route.inactive />} />}
+          {!inactive && master ? (
+            <Route
+              exact
+              path="*"
+              element={master.verified ? <route.chat /> : <route.verify />}
+            />
           ) : (
             <Route exact path="*" element={<route.auth />} />
           )}
