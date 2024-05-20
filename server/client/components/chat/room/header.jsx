@@ -119,6 +119,31 @@ function Header() {
     };
   }, []);
 
+  const handleAudioCallButtonClick = () => {
+    console.log("Room ID:", chatRoom.data.roomId);
+    const roomType = isGroup ? 'group' : 'personal';
+    const callType = 'audio';
+    socket.emit('call/request', {
+      roomId: chatRoom.data.roomId,
+      roomType,
+      callType,
+    });
+  };
+  
+  const handleVideoCallButtonClick = () => {
+    console.log("Room ID:", chatRoom.data.roomId);
+    const roomType = isGroup ? 'group' : 'personal';
+    const callType = 'video';
+    socket.emit('call/request', {
+      roomId: chatRoom.data.roomId,
+      roomType,
+      callType,
+    });
+  };
+  
+
+  
+
   return (
     <nav className="h-16 grid grid-cols-[1fr_auto] gap-4 justify-between items-center bg-white dark:bg-spill-900">
       <RoomHeaderMenu />
@@ -195,6 +220,24 @@ function Header() {
             </div>
           </div>
           <div className="pr-2 flex items-center">
+          <button
+              type="button"
+              className="p-2 rounded-full hover:bg-spill-100 dark:hover:bg-spill-800"
+              onClick={handleAudioCallButtonClick}
+            >
+              <i>
+                <bi.BiPhone />
+              </i>
+            </button>
+            <button
+              type="button"
+              className="p-2 rounded-full hover:bg-spill-100 dark:hover:bg-spill-800"
+              onClick={handleVideoCallButtonClick}
+            >
+              <i>
+                <bi.BiVideo />
+              </i>
+            </button>
             <button
               type="button"
               className="p-2 rounded-full hover:bg-spill-100 dark:hover:bg-spill-800"

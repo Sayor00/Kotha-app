@@ -24,6 +24,7 @@ const ModalSlice = createSlice({
     confirmExitGroup: false,
     confirmDeleteContact: false,
     inboxMenu: false,
+    chatMenu: false,
     confirmDeleteChatAndInbox: false,
     groupContextMenu: false,
   },

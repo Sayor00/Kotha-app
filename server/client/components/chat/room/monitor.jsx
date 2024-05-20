@@ -16,6 +16,7 @@ import { setPage } from '../../../redux/features/page';
 import { setModal } from '../../../redux/features/modal';
 import ReactionPicker from 'emoji-picker-react';
 import LinkPreview from './linkPreview';
+import ChatMenu from '../../modals/chatMenu';
 
 function Monitor({
   newMessage,
@@ -39,6 +40,36 @@ function Monitor({
   const [showReactionsForChat, setShowReactionsForChat] = useState(null);
   const emojiPickerRef = useRef(null);
   const reactionDetailsRef = useRef(null);
+
+  const handleContextMenu = (e, elem) => {
+    const chatContent = document.querySelector('#chat-content');
+  
+    const x = e.clientX > chatContent.clientWidth / 2 ? e.clientX - 160 : e.clientX;
+    const y = e.clientY > chatContent.clientHeight / 2 ? e.clientY - 56 : e.clientY;
+  
+    console.log("X coordinate:", x);
+    console.log("Y coordinate:", y);
+  
+    dispatch(
+      setModal({
+        target: 'chatMenu', // Adjusted to 'chatMenu'
+        data: {
+          chat: elem,
+          x,
+          y,
+        },
+      })
+    );
+    console.log("Context menu is open for chat:", elem._id);
+  };
+
+  const contextMenu = document.querySelector('#chat-context-menu');
+  if (contextMenu) {
+    const rect = contextMenu.getBoundingClientRect();
+    console.log("Context menu is actually opening at:", rect.left, rect.top);
+  }
+  
+
 
   useEffect(() => {
     // Function to close emoji picker when clicking outside of it
@@ -344,6 +375,7 @@ function Monitor({
     room: { chat: chatRoom },
     user: { master },
     page,
+    modal,
   } = useSelector((state) => state);
 
   const isGroup = chatRoom.data.roomType === 'group';
@@ -630,6 +662,7 @@ function Monitor({
             </i>
           </div>
         )}
+        {modal.chatMenu && <ChatMenu />}
         {chats &&
           chats
             .filter((elem) => !elem.deletedBy.includes(master._id))
@@ -650,16 +683,16 @@ function Monitor({
                 }
                 <div
                   className={`
-    ${elem.userId !== arr[i + 1]?.userId && 'mb-2'}
-    ${selectedChats ? 'cursor-pointer' : ''}
-    ${
-      selectedChats &&
-      selectedChats.includes(elem._id) &&
-      'bg-spill-200 dark:bg-black/20'
-    }
-    w-full py-0.5 px-4 gap-4 justify-center items-center
-    relative
-  `}
+                              ${elem.userId !== arr[i + 1]?.userId && 'mb-2'}
+                              ${selectedChats ? 'cursor-pointer' : ''}
+                              ${
+                                selectedChats &&
+                                selectedChats.includes(elem._id) &&
+                                'bg-spill-200 dark:bg-black/20'
+                              }
+                              w-full py-0.5 px-4 gap-4 justify-center items-center
+                              relative
+                            `}
                   aria-hidden
                   onClick={() => {
                     if (selectedChats) {
@@ -681,6 +714,7 @@ function Monitor({
                     </span>
                   )}
                   <div
+                  id='chat-content'
                     className={`
                       ${
                         elem.userId === master._id
@@ -692,6 +726,24 @@ function Monitor({
                         selectedChats && 'pl-2'
                       } // Adjust left padding for all chats when select circle is visible
                     `}
+// Modify the onContextMenu function to capture the coordinates of the right-click event
+onContextMenu={(e) => {
+  e.stopPropagation();
+  e.preventDefault();
+
+  // Capture the coordinates of the right-click event
+  const posX = e.clientX;
+  const posY = e.clientY;
+
+  // Pass the coordinates to the handleContextMenu function
+  handleContextMenu(e, elem, posX, posY);
+}}
+
+                    onTouchStart={(e) => {
+                      touchAndHoldStart(() => handleContextMenu(e, elem));
+                    }}
+                    onTouchMove={() => touchAndHoldEnd()}
+                    onTouchEnd={() => touchAndHoldEnd()}
                   >
                     {elem.userId === master._id && (
                       // start of I want this to be at far right
@@ -760,6 +812,10 @@ function Monitor({
                             bg-sky-200 dark:bg-sky-600/40
                             max-w-[65vw] md:max-w-[30vw] lg:max-w-[450px]
                             ${
+                              modal.chatMenu?.chatId === elem._id &&
+                              'bg-spill-100/60 dark:bg-spill-800/60'
+                            }
+                            ${
                               elem.userId === arr[i - 1]?.userId &&
                               moment(elem.createdAt).date() ===
                                 moment(arr[i - 1]?.createdAt).date() &&
@@ -768,17 +824,6 @@ function Monitor({
                             group relative p-2 rounded-b-xl overflow-hidden
                           `}
                             aria-hidden
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              dispatch(setSelectedChats(elem._id));
-                            }}
-                            onTouchStart={() => {
-                              touchAndHoldStart(() =>
-                                dispatch(setSelectedChats(elem._id))
-                              );
-                            }}
-                            onTouchMove={() => touchAndHoldEnd()}
-                            onTouchEnd={() => touchAndHoldEnd()}
                           >
                             {isGroup && (
                               <span
@@ -1002,6 +1047,10 @@ function Monitor({
                             bg-white dark:bg-spill-700
                             max-w-[65vw] md:max-w-[30vw] lg:max-w-[450px]
                             ${
+                              modal.chatMenu?.chatId === elem._id &&
+                              'bg-spill-100/60 dark:bg-spill-800/60'
+                            }
+                            ${
                               elem.userId === arr[i - 1]?.userId &&
                               moment(elem.createdAt).date() ===
                                 moment(arr[i - 1]?.createdAt).date() &&
@@ -1010,17 +1059,6 @@ function Monitor({
                             group relative p-2 rounded-b-xl overflow-hidden
                           `}
                             aria-hidden
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              dispatch(setSelectedChats(elem._id));
-                            }}
-                            onTouchStart={() => {
-                              touchAndHoldStart(() =>
-                                dispatch(setSelectedChats(elem._id))
-                              );
-                            }}
-                            onTouchMove={() => touchAndHoldEnd()}
-                            onTouchEnd={() => touchAndHoldEnd()}
                           >
                             {isGroup && (
                               <span

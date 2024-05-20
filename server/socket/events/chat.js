@@ -1,6 +1,5 @@
 const { io } = global;
 const cloud = require("cloudinary").v2;
-
 const InboxModel = require("../../db/models/inbox");
 const ChatModel = require("../../db/models/chat");
 const FileModel = require("../../db/models/file");
@@ -8,8 +7,102 @@ const ProfileModel = require("../../db/models/profile");
 
 const Inbox = require("../../helpers/models/inbox");
 const uniqueId = require("../../helpers/uniqueId");
+const { v4: uuidv4 } = require('uuid');
+const activeCalls = {};
+
+// Function to handle call timeout
+const handleCallTimeout = (callId) => {
+  const callInfo = activeCalls[callId];
+  if (callInfo) {
+    callInfo.receivers.forEach(receiver => {
+      io.to(receiver).emit('call/end', { callId });
+    });
+    io.to(callInfo.caller).emit('call/end', { callId });
+    delete activeCalls[callId];
+  }
+};
 
 module.exports = (socket) => {
+  socket.on('call/request', async ({ roomId, roomType, callType }) => {
+    try {
+      const room = await InboxModel.findOne({ roomId });
+      const { ownersId } = room;
+      const caller = socket.userId;
+      const receivers = ownersId.filter(id => id !== caller);
+      const callId = uuidv4();
+
+      activeCalls[callId] = {
+        roomId,
+        roomType,
+        callType,
+        caller,
+        receivers,
+        timeout: setTimeout(() => handleCallTimeout(callId), 60000) // 1 minute timeout
+      };
+
+      io.to(caller).emit('call/outgoing', { callId, roomId, receivers, callerId: caller, callType, roomType });
+      receivers.forEach(receiver => {
+        io.to(receiver).emit('call/incoming', { callId, roomId, callerId: caller, callType, roomType });
+      });
+
+    } catch (error) {
+      console.error(error.message);
+    }
+  });
+
+  socket.on('call/answer', ({ callId, answer }) => {
+    const callInfo = activeCalls[callId];
+    if (callInfo) {
+      io.to(callInfo.caller).emit('call/answer', { answer });
+      if (answer) {
+        clearTimeout(callInfo.timeout);
+      } else {
+        delete activeCalls[callId];
+      }
+    }
+  });
+
+  socket.on('call/end', ({ callId }) => {
+    const callInfo = activeCalls[callId];
+    if (callInfo) {
+      clearTimeout(callInfo.timeout);
+      delete activeCalls[callId];
+      callInfo.receivers.forEach(receiver => {
+        io.to(receiver).emit('call/end', { callId });
+      });
+      io.to(callInfo.caller).emit('call/end', { callId });
+    }
+  });
+
+  // Handle WebRTC offer
+  socket.on('webrtc/offer', ({ callId, offer }) => {
+    const callInfo = activeCalls[callId];
+    if (callInfo) {
+      callInfo.receivers.forEach(receiver => {
+        io.to(receiver).emit('webrtc/offer', { callId, offer });
+      });
+    }
+  });
+
+  // Handle WebRTC answer
+  socket.on('webrtc/answer', ({ callId, answer }) => {
+    const callInfo = activeCalls[callId];
+    if (callInfo) {
+      io.to(callInfo.caller).emit('webrtc/answer', { callId, answer });
+    }
+  });
+
+  // Handle ICE candidate
+  socket.on('webrtc/ice-candidate', ({ callId, candidate }) => {
+    const callInfo = activeCalls[callId];
+    if (callInfo) {
+      const target = socket.id === callInfo.caller ? callInfo.receivers : [callInfo.caller];
+      target.forEach(receiver => {
+        io.to(receiver).emit('webrtc/ice-candidate', { callId, candidate });
+      });
+    }
+  });
+
   // event when user sends message
   socket.on("chat/insert", async (args) => {
     try {
