@@ -3,15 +3,13 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import * as bi from 'react-icons/bi';
-import ReactDOM from 'react-dom';
 import './style.css';
 import * as route from './routes';
 import { setMaster, setSetting } from './redux/features/user';
 import socket from './helpers/socket';
 import config from './config';
 import { getSetting } from './api/services/setting.api';
-import OutgoingCall from './components/call/outgoingCall';
-import IncomingCall from './components/call/incomingCall';
+import Call from './components/call/call';
 
 function App() {
   const dispatch = useDispatch();
@@ -21,7 +19,6 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [incomingCallDetails, setIncomingCallDetails] = useState(null);
   const [outgoingCallDetails, setOutgoingCallDetails] = useState(null);
-
 
   // get access token from localStorage
   const token = localStorage.getItem('token');
@@ -85,7 +82,7 @@ function App() {
       console.log('Room Type:', roomType);
       console.log('Call Type:', callType);
       setOutgoingCallDetails({ callId, roomId, callerId, receivers, callType, roomType }); // Store outgoing call details in state
-    });    
+    });
 
     return () => {
       abortCtrl.abort();
@@ -104,90 +101,47 @@ function App() {
     };
   }, [!!master]);
 
-  useEffect(() => {
-    if (incomingCallDetails) {
-      const callWindow = window.open(
-        '',
-        'IncomingCall',
-        'width=600,height=400'
-      );
-  
-      if (callWindow) {
-        callWindow.document.write('<div id="call-root"></div>');
-        callWindow.document.close();
-  
-        // Render Call component in the new window
-        ReactDOM.render(
-          <IncomingCall 
-            callId={incomingCallDetails.callId} 
-            caller={incomingCallDetails.callerId} 
-            receiver={master._id} 
-            callType={incomingCallDetails.callType} 
-            isCaller={false} 
-          />,
-          callWindow.document.getElementById('call-root')
-        );
-  
-        callWindow.onbeforeunload = () => {
-          setIncomingCallDetails(null);
-        };
-      } else {
-        console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
-      }
-    }
-  }, [incomingCallDetails]);
-
-  useEffect(() => {
-    if (outgoingCallDetails) {
-      const callWindow = window.open(
-        '',
-        'OutgoingCall',
-        'width=600,height=400'
-      );
-  
-      if (callWindow) {
-        callWindow.document.write('<div id="call-root"></div>');
-        callWindow.document.close();
-    
-        // Render Call component in the new window
-        ReactDOM.render(
-          <OutgoingCall 
-            callId={outgoingCallDetails.callId} 
-            caller={master._id} 
-            receiver={outgoingCallDetails.receivers} 
-            callType={outgoingCallDetails.callType} 
-            isCaller={true} 
-          />,
-          callWindow.document.getElementById('call-root')
-        );
-  
-        callWindow.onbeforeunload = () => {
-          setOutgoingCallDetails(null);
-        };
-      } else {
-        console.error('Failed to open the call window. It may have been blocked by a popup blocker.');
-      }
-    }
-  }, [outgoingCallDetails]);  
-  
+  const handleCallEnd = () => {
+    setIncomingCallDetails(null);
+    setOutgoingCallDetails(null);
+  };
 
   return (
     <BrowserRouter>
       {loaded ? (
-        <Routes>
-          {inactive && <Route exact path="*" element={<route.inactive />} />}
-          {!inactive && master ? (
-            <>
+        <>
+          <Routes>
+          {(incomingCallDetails || outgoingCallDetails) && (
               <Route
                 exact
                 path="*"
-                element={master.verified ? <route.chat /> : <route.verify />}
+                element={
+                  <Call
+                    callId={incomingCallDetails ? incomingCallDetails.callId : outgoingCallDetails.callId}
+                    caller={incomingCallDetails ? incomingCallDetails.callerId : master._id}
+                    receiver={incomingCallDetails ? master._id : outgoingCallDetails.receivers}
+                    callType={incomingCallDetails ? incomingCallDetails.callType : outgoingCallDetails.callType}
+                    isCaller={!incomingCallDetails}
+                    onCallEnd={handleCallEnd}
+                  />
+                }
               />
-            </>
-          ) : (
-            <Route exact path="*" element={<route.auth />} />
-          )}
-        </Routes>
+            )}
+            {inactive && <Route exact path="*" element={<route.inactive />} />}
+            {!inactive && master ? (
+              <>
+                <Route
+                  exact
+                  path="*"
+                  element={master.verified ? <route.chat /> : <route.verify />}
+                />
+              </>
+            ) : (
+              <Route exact path="*" element={<route.auth />} />
+            )}
+          </Routes>
+
+        </>
       ) : (
         <div className="absolute w-full h-full flex justify-center items-center bg-white dark:text-white/90 dark:bg-spill-900">
           <div className="flex gap-2 items-center">

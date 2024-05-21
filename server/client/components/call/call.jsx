@@ -2,21 +2,23 @@ import React, { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import socket from '../../helpers/socket';
 
-const OutgoingCall = ({ callId, caller, receiver, callType, isCaller }) => {
-  const [callStatus, setCallStatus] = useState('calling');
+const Call = ({ callId, caller, receiver, callType, isCaller }) => {
+  const [callStatus, setCallStatus] = useState(isCaller ? 'calling' : 'ringing');
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const iceCandidatesRef = useRef([]); // Queue to store ICE candidates
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setCallStatus('noAnswer');
-      socket.emit('call/end', { callId });
-    }, 60000); // 1 minute timeout for unanswered calls
+    if (isCaller) {
+      const timeoutId = setTimeout(() => {
+        setCallStatus('noAnswer');
+        socket.emit('call/end', { callId });
+      }, 60000); // 1 minute timeout for unanswered calls
 
-    return () => clearTimeout(timeoutId);
-  }, [callId]);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isCaller, callId]);
 
   useEffect(() => {
     const handleCallAnswer = ({ answer }) => {
@@ -38,6 +40,15 @@ const OutgoingCall = ({ callId, caller, receiver, callType, isCaller }) => {
     const handleConnectionLost = () => {
       setCallStatus('connectionLost');
       endCall();
+    };
+
+    const handleOffer = async ({ callId: offerCallId, offer }) => {
+      if (callId === offerCallId) {
+        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peerConnectionRef.current.createAnswer();
+        await peerConnectionRef.current.setLocalDescription(answer);
+        socket.emit('webrtc/answer', { callId, answer });
+      }
     };
 
     const handleAnswer = async ({ callId: answerCallId, answer }) => {
@@ -65,6 +76,7 @@ const OutgoingCall = ({ callId, caller, receiver, callType, isCaller }) => {
     socket.on('call/answer', handleCallAnswer);
     socket.on('call/end', handleCallEnd);
     socket.on('disconnect', handleConnectionLost);
+    socket.on('webrtc/offer', handleOffer);
     socket.on('webrtc/answer', handleAnswer);
     socket.on('webrtc/ice-candidate', handleICECandidate);
 
@@ -72,6 +84,7 @@ const OutgoingCall = ({ callId, caller, receiver, callType, isCaller }) => {
       socket.off('call/answer', handleCallAnswer);
       socket.off('call/end', handleCallEnd);
       socket.off('disconnect', handleConnectionLost);
+      socket.off('webrtc/offer', handleOffer);
       socket.off('webrtc/answer', handleAnswer);
       socket.off('webrtc/ice-candidate', handleICECandidate);
     };
@@ -139,30 +152,59 @@ const OutgoingCall = ({ callId, caller, receiver, callType, isCaller }) => {
   };
 
   return (
-    <div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      {callStatus === 'ringing' && (
+        <div className="text-center">
+          <p className="text-lg font-semibold mb-4">Incoming call from {caller}</p>
+          <button
+            onClick={() => { setCallStatus('connected'); startWebRTC(false); socket.emit('call/answer', { callId, answer: true }); }}
+            className="px-4 py-2 bg-green-500 text-white rounded shadow"
+          >
+            Answer
+          </button>
+          <button
+            onClick={() => socket.emit('call/answer', { callId, answer: false })}
+            className="px-4 py-2 bg-red-500 text-white rounded shadow ml-2"
+          >
+            Reject
+          </button>
+        </div>
+      )}
       {callStatus === 'calling' && (
-        <div>
-          <p>Calling: {receiver}</p>
-          <button onClick={handleEndCall}>End Call</button>
+        <div className="text-center">
+          <p className="text-lg font-semibold mb-4">Calling: {receiver}</p>
+          <button
+            onClick={handleEndCall}
+            className="px-4 py-2 bg-red-500 text-white rounded shadow"
+          >
+            End Call
+          </button>
         </div>
       )}
       {callStatus === 'connected' && (
-        <div>
-          <p>Call connected with {receiver}</p>
-          <video ref={localStreamRef} autoPlay muted />
-          <video ref={remoteStreamRef} autoPlay />
-          <button onClick={handleEndCall}>End Call</button>
+        <div className="text-center">
+          <p className="text-lg font-semibold mb-4">Call connected with {isCaller ? receiver : caller}</p>
+          <div className="flex justify-center items-center space-x-4">
+            <video ref={localStreamRef} autoPlay muted className="w-[300px] rounded shadow" />
+            <video ref={remoteStreamRef} autoPlay className="w-[300px] rounded shadow" />
+          </div>
+          <button
+            onClick={handleEndCall}
+            className="mt-4 px-4 py-2 bg-red-500 text-white rounded shadow"
+          >
+            End Call
+          </button>
         </div>
       )}
-      {callStatus === 'ended' && <p>Call ended</p>}
-      {callStatus === 'noAnswer' && <p>Call was not answered</p>}
-      {callStatus === 'rejected' && <p>Call was rejected</p>}
-      {callStatus === 'connectionLost' && <p>Connection lost</p>}
+      {callStatus === 'ended' && <p className="text-lg text-center">Call ended</p>}
+      {callStatus === 'noAnswer' && <p className="text-lg text-center">Call was not answered</p>}
+      {callStatus === 'rejected' && <p className="text-lg text-center">Call was rejected</p>}
+      {callStatus === 'connectionLost' && <p className="text-lg text-center">Connection lost</p>}
     </div>
   );
 };
 
-OutgoingCall.propTypes = {
+Call.propTypes = {
   callId: PropTypes.string.isRequired,
   caller: PropTypes.string.isRequired,
   receiver: PropTypes.string.isRequired,
@@ -170,4 +212,4 @@ OutgoingCall.propTypes = {
   isCaller: PropTypes.bool.isRequired,
 };
 
-export default OutgoingCall;
+export default Call;
